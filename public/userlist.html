@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<title>用户列表</title>
+		<link rel="stylesheet" type="text/css" href="./lib/jquery-easyui-1.5.5.2/themes/bootstrap/easyui.css">
+		<link rel="stylesheet" type="text/css" href="./lib/jquery-easyui-1.5.5.2/themes/icon.css"/>
+		<script src="lib/jquery-easyui-1.5.5.2/jquery.min.js" type="text/javascript" charset="utf-8"></script>
+		<script src="lib/jquery-easyui-1.5.5.2/jquery.easyui.min.js" type="text/javascript" charset="utf-8"></script>
+		<script src="lib/jquery-easyui-1.5.5.2/locale/easyui-lang-zh_CN.js" type="text/javascript" charset="utf-8"></script>
+		<script src="lib/cookie.js" type="text/javascript" charset="utf-8"></script>
+		<script src="lib/js/ajaxsetup.js" type="text/javascript" charset="utf-8"></script>
+		<link rel="stylesheet" type="text/css" href="./style/admin.css"/>
+		<style type="text/css">
+			#add-dialog {
+				display: none;
+			}
+			.info-dailog {
+				display: none;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="easyui-layout" data-options="fit:true">
+			<!-- north -->
+			<div data-options="region:'north'">
+				<input id="ss" />
+				<div id="mm" style="width:120px;padding: 20px,0;">
+				    <div data-options="name:'course_name',iconCls:'icon-ok'">课程名</div>
+				    <div data-options="name:'college',iconCls:'icon-add'">大学</div>
+				</div>
+			</div>
+			<!-- center -->
+			<div data-options="region:'center'">
+				<table id="coursett"></table>
+				
+			</div>
+		</div>
+		<!-- 添加课程的对话框 -->
+		<div id="add-dialog">
+			<form id = "frmAdd">
+				<table>
+					<tr>
+						<td>课程名</td>
+						<td>
+							<input type="text" name= "course_name" id = "course_name">
+						</td>
+					</tr>
+					<tr>
+						<td>作者</td>
+						<td>
+							<input type="text" name= "author" id = "author">
+						</td>
+					</tr>
+					<tr>
+						<td>大学</td>
+						<td>
+							<input type="text" name= "college" id = "college">
+						</td>
+					</tr>
+					<tr>
+						<td>分类</td>
+						<td>
+							<select name="category_Id" id="category_Id">
+								<option value="1">1</option>
+								<option value="2">2</option>
+								<option value="3">3</option>
+								<option value="4">4</option>
+								<option value="5">5</option>
+							</select>
+						</td>
+					</tr>
+				</table>
+			</form>
+		</div>
+		 
+		<!-- 显示课程信息的对话框 -->
+		<div class="info-dailog">
+			
+			<div class="tb-course-data">
+				
+			</div>
+		</div>
+		
+		<script id="showInfoDialogTmpl" type="text/html">
+			<h3>课程详情</h3>
+			<table>
+				<tr>
+					<td>课程ID</td>
+					<td id = "cId">{{id}}</td>
+				</tr>
+				<tr>
+					<td>课程名</td>
+					<td id = "cName">{{course_name}}</td>
+				</tr>
+				<tr>
+					<td>课程大学</td>
+					<td id = "cCollage">{{college}}</td>
+				</tr>
+				<tr>
+					<td>作者</td>
+					<td id = "cAut">{{author}}</td>
+				</tr>
+				<tr>
+					<td>分类</td>
+					<td id = "cType">{{category_id}}</td>
+				</tr>
+			</table>
+		</script>
+		
+		<script type="text/javascript">
+			$(function(){
+				initTable();
+				initSearchBox();
+			});
+			
+			function initSearchBox(){
+				$('#ss').searchbox({
+					width:300,
+				    searcher:function(value,name){
+						//
+						var param = $.parseJSON('{"'+name+'_like":"'+value+'"}')
+						initTable(param)
+				    },
+				    menu:'#mm',
+				    prompt:'请输入搜索的内容'
+				});
+			}
+
+			//init table 
+			function initTable(param){
+				$('#coursett').datagrid({
+				    // url:'/api/course',
+					title:'课程列表',
+					fit:true,
+					fitColumns:true,
+					method:'GET',
+					idField:'id',
+					loadMsg:'正在获取。。',
+					singleSelect:true,
+					pagination:true,
+					pageSize:10,
+					pageNumber:1,
+					pageList:[10,20,30],
+					queryParams:param,
+				    columns:[[
+						{field:'ck',checkbox:true,align:'left',width:100},
+				        {field:'id',title:'编号',width:100},
+				        {field:'course_name',title:'课程名',width:100,editor:{type:'text',options:{required:true}}},
+				        {field:'author',title:'作者',width:100,align:'right',editor:{type:'text'}},
+				        {field:'college',title:'大学',width:100,editor:{type:'text'}},
+				        {field:'category_Id',title:'分类',width:100,align:'right',formatter:function(value,row,index){
+							return '分类'+value;
+						}},
+				        {field:'action',title:'操作',width:100,formatter:function(value,row,index){
+							//如果是编辑状态，那么返回，保存和取消
+							//如果是视图状态，返回，编辑和删除的按钮
+							var str = "";
+							if (row.isEditing){
+								str += '<a href="javascript:" onclick="saveRow('+index+')">保存</a>&nbsp;';
+								str += '<a href="javascript:" onclick="cancelEdit('+index+')">取消</a>&nbsp;';
+							
+							}else {
+								str += '<a href="javascript:" onclick="editRow('+index+')">修改</a>&nbsp;';
+								str += '<a href="javascript:" onclick="delRow('+index+')">删除</a>&nbsp;';
+								
+							}
+							return str;
+						}}
+				    ]],
+					toolbar:[{
+						id:'btnDownShell',
+						text:'添加',
+						iconCls:'icon-add',
+						handler:function(){
+							//弹出一个添加层
+							$('#add-dialog').dialog({
+								title: '添加课程信息',
+								width: 300,
+								height: 300,
+								modal: true,
+								collapsible: true,
+								minimizable: true,
+								maximizable: true,
+								resizable: true,
+								buttons:[{
+									text:'保存',
+									iconCls:'icon-ok',
+									handler:function(){
+										var arrData = $('#frmAdd').serializeArray();
+										arrData.push({
+											name:'id',
+											value:Date.now()
+										})
+										//往后台保存数据
+										$.ajax({
+											url:'/api/course/',
+											type:'POST',
+											data:arrData,
+											dataType:'json'
+										}).done(function(data){
+											//提醒用户添加成功
+											//清空表单，关闭对话框
+											$('#frmAdd')[0].reset();
+											$('#add-dialog').dialog('close');
+											$('#coursett').datagrid('reload');
+											$.messager.show({
+												title:'添加提醒',
+												msg:'添加成功！',
+												timeout:1000
+											})
+										}).fail(function(){
+											$.messager.alert('添加消息','添加失败，请重试！','warning');
+										});
+									}
+								},{
+									text:'关闭',
+									iconCls:'icon-no',
+									handler:function(){
+										$.messager.confirm({
+											title:'提醒',
+											msg:'确认取消添加课程信息吗！',
+											fn:function(r){
+												if (!r) {
+													return;
+												}
+												
+												
+											}
+										})
+										
+									}
+								}]
+							})
+						}
+					},{
+						id:'btnDelete',
+						text:'删除',
+						iconCls:'icon-cancel',
+						handler:function(){
+							//deleteEvent();
+							var row = $('#coursett').datagrid('getSelected');
+							if (row) {
+								var delIndex = $('#coursett').datagrid('getRowIndex',row);
+								delRow(delIndex);
+							} else {
+								$.messager.alert('提示消息','请先选择需要删除的行！','warning');
+							}
+						}
+					},{
+						id:'btnEdit',
+						text:'修改',
+						iconCls:'icon-edit',
+						handler:function(){
+							var row = $('#coursett').datagrid('getSelected');
+							if (row) {
+								var delIndex = $('#coursett').datagrid('getRowIndex',row);
+								editRow(delIndex);
+							} else {
+								$.messager.alert('提示消息','请先选择需要修改的行！','warning');
+							}
+					}
+					},{
+						id:'clearAllSelect',
+						text:'清除选择',
+						iconCls:'icon-redo',
+						handler:function(){
+							$('#coursett').datagrid('clearSelections');
+						}
+					}
+					],
+					onBeforeLoad: function (param) {
+						param._page = param.page;
+						param._limit = param.rows;
+						param._sort = 'id';
+						param._order = 'desc';
+					},
+					loader:function(param,successfn,errorfn){
+						$.ajax({
+							url:'/api/course',
+							data:param,
+							type:'GET',
+							dataType:'json',
+							success:function(resData,status,xhr){
+								var total =parseInt(xhr.getResponseHeader('X-Total-Count'));
+								var datagridData = {rows:resData.data,total:total};
+								successfn(datagridData);
+							},
+							error:errorfn
+						})
+					},
+					//双击行
+					onDblClickRow: function(rowIndex,rowData){
+						var html = template('showInfoDialogTmpl',rowData);
+						// $('#cId').text(rowData.id);
+						// $('#cName').text(rowData.course_name);
+						//$('#coursett').datagrid('beginEdit',index);
+						$('.info-dailog').dialog({
+							title:'课程详情',
+							content:html,
+							width:400,
+							height:400,
+							modal:true,
+							iconCls:'icon-edit',
+							buttons: [{
+								text: '关闭',
+								iconCls: 'icon-no',
+								handler: function () {
+									$('.info-dailog').dialog('close');
+								}
+							}]
+						})
+					},
+					onBeforeEdit: function(index,row){
+						row.isEditing = true;
+						$('#coursett').datagrid('refreshRow',index);
+					},
+					onCancelEdit: function(index,row){
+						row.isEditing = false;
+						$('#coursett').datagrid('refreshRow',index);
+					},
+					onEndEdit: function(index,row){
+						row.isEditing = false;
+						$('#coursett').datagrid('refreshRow',index);
+					}
+				});
+				
+				//init pagination分页器
+				var pager  = $('#coursett').datagrid('getPager');
+				pager.pagination({
+					layout:['list','sep','first','prev','sep','links','sep','next','refresh','last','manual']
+				})
+			}
+			//edit
+			function editRow(rowIndex){
+				$('#coursett').datagrid('beginEdit',rowIndex);
+				//修改当前行的idEditing == true
+			}
+			//cancel
+			function cancelEdit(rowIndex){
+				$('#coursett').datagrid('cancelEdit',rowIndex);
+				//修改当前行的idEditing == false
+			}
+			//delete
+			function delRow(rowIndex){
+				var rowDate = $('#coursett').datagrid('getRows')[rowIndex];
+				$.messager.confirm({
+					title:'确认消息',
+					msg:'确认删除吗！',
+					fn:function(r){
+						if (!r) {
+							return;
+						}
+						$.ajax({
+							url:'/api/course/' + rowDate.id,
+							type:'DELETE',
+							dataType:'json'
+						}).done(function(data){
+							$('#coursett').datagrid('reload');
+						}).fail(function(){
+							$.messager.alert('删除消息','删除失败，请重试！','warning');
+						});
+					}
+				})
+			}
+			//save
+			function saveRow(rowIndex){
+				//修改前数据
+				var oldDate = $('#coursett').datagrid('getRows')[rowIndex];
+				//jquery extend方法，object.assign方法相似
+				oldDate = $.extend({},oldDate);
+				//拿到修改后的数据
+				$('#coursett').datagrid('endEdit',rowIndex);
+				var rowDate = $('#coursett').datagrid('getRows')[rowIndex];
+				
+				$('#coursett').datagrid('beginEdit',rowIndex);
+				rowDate.isEditing = '';
+				//ajaxs
+				$.ajax({
+					url:'/api/course/'+rowDate.id,
+					data:rowDate,
+					type:'PUT',
+					dataType:'json'
+				}).done(function(data){
+					$.messager.show({
+						title:'提示消息',
+						msg:'修改成功！',
+						timeOut:1000
+					});
+					//结束当前行的编辑状态
+					$('#coursett').datagrid('endEdit',rowIndex);
+				}).fail(function(xhr,status,erromsg){
+					$.messager.show({
+						title:'提示消息',
+						msg:'修改失败了！',
+						timeOut:1000
+					});
+					//结束当前行的编辑状态
+					$('#coursett').datagrid('endEdit',rowIndex);
+				});
+				//返回到原来的数据状态
+				$.extend(rowDate,oldDate)
+				//结束当前行的编辑状态
+				//$('#coursett').datagrid('endEdit',rowIndex);
+			}
+		</script>
+	</body>
+</html>
